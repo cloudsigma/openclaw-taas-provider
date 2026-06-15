@@ -1,0 +1,66 @@
+{
+  "name": "@cloudsigma/openclaw-taas-provider",
+  "version": "0.1.0",
+  "description": "OpenClaw provider plugin for CloudSigma TaaS, an OpenAI-compatible multi-model gateway.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/",
+    "openclaw.plugin.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json",
+    "test": "vitest run --config vitest.config.ts",
+    "validate:clawhub": "clawhub package validate . --json",
+    "prepack": "npm run build && npm test"
+  },
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "cloudsigma",
+    "taas",
+    "provider",
+    "openai-compatible",
+    "llm"
+  ],
+  "author": "CloudSigma",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cloudsigma/openclaw-taas-provider"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.6.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "openclaw": "2026.6.6",
+    "typescript": "^5.9.0",
+    "vitest": "^4.0.0"
+  },
+  "openclaw": {
+    "extensions": [
+      "./dist/index.js"
+    ],
+    "install": {
+      "clawhubSpec": "clawhub:@cloudsigma/openclaw-taas-provider",
+      "defaultChoice": "clawhub",
+      "minHostVersion": ">=2026.6.6"
+    },
+    "compat": {
+      "pluginApi": ">=2026.6.6"
+    },
+    "build": {
+      "openclawVersion": "2026.6.6",
+      "pluginSdkVersion": "2026.6.6"
+    }
+  },
+  "homepage": "https://github.com/cloudsigma/openclaw-taas-provider#readme",
+  "bugs": {
+    "url": "https://github.com/cloudsigma/openclaw-taas-provider/issues"
+  }
+}

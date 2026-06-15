@@ -1,0 +1,45 @@
+name: Publish to ClawHub
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Package version to publish
+        required: true
+        default: 0.1.0
+      tags:
+        description: Comma-separated ClawHub tags
+        required: true
+        default: latest
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: clawhub-publish
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npx -y clawhub@0.21.0 package validate . --json
+      - name: Publish package
+        run: |
+          npx -y clawhub@0.21.0 package publish . \
+            --family code-plugin \
+            --owner cloudsigma \
+            --name @cloudsigma/openclaw-taas-provider \
+            --display-name "CloudSigma TaaS Provider" \
+            --version "${{ inputs.version }}" \
+            --tags "${{ inputs.tags }}" \
+            --source-repo cloudsigma/openclaw-taas-provider \
+            --source-ref "${{ github.ref_name }}" \
+            --source-commit "${{ github.sha }}" \
+            --json
