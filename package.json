@@ -52,12 +52,16 @@
       "minHostVersion": ">=2026.6.6"
     },
     "compat": {
-      "pluginApi": ">=2026.6.6"
+      "pluginApi": ">=2026.6.6",
+      "minGatewayVersion": "2026.6.6"
     },
     "build": {
       "openclawVersion": "2026.6.6",
       "pluginSdkVersion": "2026.6.6"
-    }
+    },
+    "providers": [
+      "cloudsigma"
+    ]
   },
   "homepage": "https://github.com/cloudsigma/openclaw-taas-provider#readme",
   "bugs": {
