@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.2
+
+- Expands the public README/ClawHub listing with full install, setup, model catalog, discovery, security, compatibility, validation, and troubleshooting documentation.
+- Clarifies package identity, provider id, alias, default endpoint, default model, and supported behavior.
+- Improves package and manifest descriptions so registry/search surfaces communicate what the plugin actually does.
+
+## 0.1.1
+
+- Adds explicit package-level OpenClaw provider metadata and minimum gateway compatibility metadata.
+
 ## 0.1.0
 
 - Initial CloudSigma TaaS provider plugin for OpenClaw.

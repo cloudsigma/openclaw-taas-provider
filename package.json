@@ -1,7 +1,7 @@
 {
   "name": "@cloudsigma/openclaw-taas-provider",
-  "version": "0.1.1",
-  "description": "OpenClaw provider plugin for CloudSigma TaaS, an OpenAI-compatible multi-model gateway.",
+  "version": "0.1.2",
+  "description": "First-class OpenClaw provider plugin for CloudSigma TaaS: OpenAI-compatible multi-model gateway, API-key onboarding, static catalog, live model discovery, streaming usage, and tool-call compatibility.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
