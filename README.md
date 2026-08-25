@@ -73,7 +73,8 @@ The provider alias `cloudsigma-taas` resolves to the same provider auth as `clou
 
 CloudSigma Talk is registered as realtime voice provider `cloudsigma`. It currently supports browser WebRTC only and uses the fixed model `gpt-realtime-2.1`.
 
-Configure the plugin with the exact HTTPS browser origin that will establish WebRTC. `browserOrigin` is an origin, not a page URL: it must contain no path, query, fragment, or credentials.
+> [!IMPORTANT]
+> **In OpenClaw `2026.7.1-2`, `browserOrigin` is static plugin configuration; it is not inferred from each browser request. It must exactly equal the active OpenClaw UI origin and an origin on the CloudSigma TaaS allowlist.** Scheme, hostname, and port must all match. If the UI is served from another origin (including another port), update this setting and the TaaS allowlist before using Talk. Do not use a page URL: paths, queries, fragments, credentials, and a trailing slash are rejected.
 
 ```json5
 {
@@ -106,6 +107,8 @@ Talk credential precedence is deliberately isolated from OpenAI authentication:
 4. `TAAS_API_KEY`
 
 OpenAI API keys, OpenAI/Codex OAuth, and external OpenAI CLI credentials are never considered. The long-lived key remains server-side; the browser receives only the short-lived client secret and the fixed offer URL `https://taas.cloudsigma.com/v1/realtime/calls`.
+
+Browser sessions are minted with OpenAI-compatible `audio.input.turn_detection` server VAD, automatic response creation, and response interruption enabled. OpenClaw's `vadThreshold`, `prefixPaddingMs`, and `silenceDurationMs` Talk options are forwarded when set. This provider therefore advertises server-VAD barge-in support for its browser WebRTC transport.
 
 ## Onboarding behavior
 

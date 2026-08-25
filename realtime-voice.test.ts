@@ -62,7 +62,12 @@ describe("CloudSigma Talk provider", () => {
       id: "cloudsigma",
       defaultModel: CLOUDSIGMA_REALTIME_MODEL,
       models: [CLOUDSIGMA_REALTIME_MODEL],
-      capabilities: { transports: ["webrtc"], supportsBrowserSession: true },
+      capabilities: {
+        transports: ["webrtc"],
+        supportsBrowserSession: true,
+        supportsBargeIn: true,
+        handlesInputAudioBargeIn: true,
+      },
     });
     expect(() => provider.createBridge({} as never)).toThrow("browser WebRTC only");
   });
@@ -101,6 +106,7 @@ describe("CloudSigma Talk provider", () => {
       transport: "webrtc",
       clientSecret: "ephemeral",
       offerUrl: CLOUDSIGMA_REALTIME_CALLS_URL,
+      model: CLOUDSIGMA_REALTIME_MODEL,
     });
   });
 
@@ -143,10 +149,33 @@ describe("CloudSigma Talk provider", () => {
     expect(fetchWithSsrFGuard.mock.calls[0]![0].init.headers.Authorization).toBe("Bearer taas-env");
   });
 
-  it("pins the exact TaaS origin, denies redirects, sends exact origin, and fixes model/body", async () => {
-    fetchWithSsrFGuard.mockResolvedValue(guardedJson({ value: "ephemeral" }));
-    await createCloudsigmaBrowserSession(
-      request({ apiKey: "key", browserOrigin: "https://studio.example:8443" }),
+  it("pins endpoints and mints an OpenAI-compatible server-VAD session without dropping options", async () => {
+    fetchWithSsrFGuard.mockResolvedValue(
+      guardedJson({
+        value: "ephemeral",
+        expires_at: 1_800_000_000,
+        session: {
+          model: CLOUDSIGMA_REALTIME_MODEL,
+          audio: { output: { voice: "echo" } },
+        },
+      }),
+    );
+    const result = await createCloudsigmaBrowserSession(
+      {
+        ...request({ apiKey: "key", browserOrigin: "https://studio.example:8443" }),
+        instructions: "Keep answers concise",
+        voice: "echo",
+        vadThreshold: 0.42,
+        prefixPaddingMs: 275,
+        silenceDurationMs: 650,
+        tools: [
+          {
+            name: "lookup",
+            description: "Look something up",
+            parameters: { type: "object", properties: { query: { type: "string" } } },
+          },
+        ],
+      },
     );
     const call = fetchWithSsrFGuard.mock.calls[0]![0];
     expect(call).toMatchObject({
@@ -160,11 +189,46 @@ describe("CloudSigma Talk provider", () => {
       },
     });
     expect(JSON.parse(call.init.body)).toEqual({
-      session: { type: "realtime", model: CLOUDSIGMA_REALTIME_MODEL },
+      session: {
+        type: "realtime",
+        model: CLOUDSIGMA_REALTIME_MODEL,
+        instructions: "Keep answers concise",
+        audio: {
+          input: {
+            turn_detection: {
+              type: "server_vad",
+              create_response: true,
+              interrupt_response: true,
+              threshold: 0.42,
+              prefix_padding_ms: 275,
+              silence_duration_ms: 650,
+            },
+          },
+          output: { voice: "echo" },
+        },
+        tools: [
+          {
+            type: "function",
+            name: "lookup",
+            description: "Look something up",
+            parameters: { type: "object", properties: { query: { type: "string" } } },
+          },
+        ],
+        tool_choice: "auto",
+      },
     });
     expect(ssrfPolicyFromHttpBaseUrlAllowedOrigin).toHaveBeenCalledWith(
       CLOUDSIGMA_REALTIME_ORIGIN,
     );
+    expect(result).toEqual({
+      provider: "cloudsigma",
+      transport: "webrtc",
+      clientSecret: "ephemeral",
+      offerUrl: CLOUDSIGMA_REALTIME_CALLS_URL,
+      model: CLOUDSIGMA_REALTIME_MODEL,
+      voice: "echo",
+      expiresAt: 1_800_000_000_000,
+    });
   });
 
   it("rejects model overrides", async () => {
@@ -176,20 +240,44 @@ describe("CloudSigma Talk provider", () => {
     ).rejects.toThrow(`only ${CLOUDSIGMA_REALTIME_MODEL}`);
   });
 
-  it("accepts GA and legacy shapes and rejects conflicting or missing credentials", () => {
+  it("safely parses GA expiry and effective session metadata", () => {
     expect(
       parseCloudsigmaClientSecret({
         value: "ga",
-        expires_at: 123,
-        session: { model: CLOUDSIGMA_REALTIME_MODEL },
+        expires_at: 1_800_000_000,
+        session: {
+          model: "effective-model",
+          audio: { output: { voice: "effective-voice" } },
+        },
       }),
-    ).toBe("ga");
-    expect(parseCloudsigmaClientSecret({ client_secret: { value: "legacy", expires_at: 123 } })).toBe(
-      "legacy",
-    );
-    expect(parseCloudsigmaClientSecret({ value: "same", client_secret: { value: "same" } })).toBe(
-      "same",
-    );
+    ).toEqual({
+      value: "ga",
+      expiresAt: 1_800_000_000_000,
+      model: "effective-model",
+      voice: "effective-voice",
+    });
+    expect(
+      parseCloudsigmaClientSecret({
+        client_secret: { value: "legacy", expires_at: 1_800_000_001 },
+      }),
+    ).toEqual({ value: "legacy", expiresAt: 1_800_000_001_000 });
+    expect(parseCloudsigmaClientSecret({ value: "same", client_secret: { value: "same" } })).toEqual({
+      value: "same",
+    });
+  });
+
+  it("omits malformed expiry and rejects conflicting or missing credentials", () => {
+    expect(parseCloudsigmaClientSecret({ value: "ga", expires_at: "not-a-timestamp" })).toEqual({
+      value: "ga",
+    });
+    expect(parseCloudsigmaClientSecret({ value: "ga", expires_at: -1 })).toEqual({ value: "ga" });
+    expect(
+      parseCloudsigmaClientSecret({
+        value: "ga",
+        expires_at: "invalid",
+        client_secret: { value: "ga", expires_at: 1_800_000_002 },
+      }),
+    ).toEqual({ value: "ga", expiresAt: 1_800_000_002_000 });
     expect(() =>
       parseCloudsigmaClientSecret({ value: "one", client_secret: { value: "two" } }),
     ).toThrow("conflicting");
@@ -232,5 +320,33 @@ describe("CloudSigma Talk provider", () => {
     expect((error as Error).message).toContain("HTTP 429");
     expect((error as Error).message).not.toContain("sensitive provider detail");
     expect(failure.release).toHaveBeenCalled();
+  });
+
+  it("treats browserOrigin as exact static configuration when reporting readiness", () => {
+    const provider = buildCloudsigmaRealtimeVoiceProvider();
+    expect(
+      provider.isConfigured({
+        cfg: {},
+        providerConfig: { apiKey: "key", browserOrigin: "https://studio.example" },
+      }),
+    ).toBe(true);
+    for (const browserOrigin of [
+      "https://studio.example/",
+      "https://studio.example/talk",
+      "http://studio.example",
+    ]) {
+      expect(
+        provider.isConfigured({ cfg: {}, providerConfig: { apiKey: "key", browserOrigin } }),
+      ).toBe(false);
+    }
+    // The 2026.7.1-2 request contract has no per-request browser origin. Any
+    // exact configured origin is accepted here, so operators must keep it in
+    // sync with both the active UI origin and the provider allowlist.
+    expect(
+      provider.isConfigured({
+        cfg: {},
+        providerConfig: { apiKey: "key", browserOrigin: "https://other.example" },
+      }),
+    ).toBe(true);
   });
 });

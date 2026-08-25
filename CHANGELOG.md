@@ -5,6 +5,9 @@
 - Add first-class CloudSigma realtime Talk registration for browser WebRTC.
 - Mint scoped credentials through the fixed TaaS client-secret endpoint for `gpt-realtime-2.1`.
 - Add strict credential precedence, exact browser-origin binding, SSRF/redirect protections, bounded response parsing, and GA/legacy response compatibility.
+- Materialize plugin `apiKey` SecretRefs through the OpenClaw runtime config contract.
+- Mint browser sessions with OpenAI-compatible server VAD and return effective expiry/model/voice metadata.
+- Document the static `browserOrigin` requirement in OpenClaw `2026.7.1-2`.
 - Upgrade the public OpenClaw plugin SDK contract to `2026.7.1-2`.
 
 ## 0.1.2

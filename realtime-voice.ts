@@ -8,6 +8,7 @@ import type {
 import { REALTIME_VOICE_AUDIO_FORMAT_PCM16_24KHZ } from "openclaw/plugin-sdk/realtime-voice";
 import { hasConfiguredSecretInput, normalizeResolvedSecretInputString } from "openclaw/plugin-sdk/secret-input";
 import type { SecretInput } from "openclaw/plugin-sdk/secret-input";
+import { resolveExpiresAtMsFromEpochSeconds } from "openclaw/plugin-sdk/number-runtime";
 import { fetchWithSsrFGuard, ssrfPolicyFromHttpBaseUrlAllowedOrigin } from "openclaw/plugin-sdk/ssrf-runtime";
 
 export const CLOUDSIGMA_REALTIME_PROVIDER_ID = "cloudsigma";
@@ -93,8 +94,20 @@ function readNonEmptyString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+export interface CloudsigmaClientSecret {
+  value: string;
+  expiresAt?: number;
+  model?: string;
+  voice?: string;
+}
+
+function readSessionVoice(session: JsonRecord | undefined): string | undefined {
+  const audio = asRecord(session?.audio);
+  return readNonEmptyString(asRecord(audio?.output)?.voice) ?? readNonEmptyString(session?.voice);
+}
+
 /** Accepts the GA response and the former nested response, but never ambiguous credentials. */
-export function parseCloudsigmaClientSecret(payload: unknown): string {
+export function parseCloudsigmaClientSecret(payload: unknown): CloudsigmaClientSecret {
   const root = asRecord(payload);
   if (!root) throw new Error("CloudSigma Talk returned malformed JSON");
 
@@ -106,14 +119,26 @@ export function parseCloudsigmaClientSecret(payload: unknown): string {
   }
   const value = gaValue ?? legacyValue;
   if (!value) throw new Error("CloudSigma Talk response did not include an ephemeral client secret");
-  return value;
+
+  const expiresAt =
+    resolveExpiresAtMsFromEpochSeconds(root.expires_at) ??
+    resolveExpiresAtMsFromEpochSeconds(legacy?.expires_at);
+  const session = asRecord(root.session);
+  const model = readNonEmptyString(session?.model) ?? readNonEmptyString(root.model);
+  const voice = readSessionVoice(session) ?? readNonEmptyString(root.voice);
+  return {
+    value,
+    ...(expiresAt !== undefined ? { expiresAt } : {}),
+    ...(model ? { model } : {}),
+    ...(voice ? { voice } : {}),
+  };
 }
 
 async function requestClientSecret(params: {
   apiKey: string;
   browserOrigin: string;
   req: RealtimeVoiceBrowserSessionCreateRequest;
-}): Promise<string> {
+}): Promise<CloudsigmaClientSecret> {
   const tools = params.req.tools?.map((tool) => ({
     type: "function",
     name: tool.name,
@@ -124,7 +149,25 @@ async function requestClientSecret(params: {
     type: "realtime",
     model: CLOUDSIGMA_REALTIME_MODEL,
     ...(params.req.instructions ? { instructions: params.req.instructions } : {}),
-    ...(params.req.voice ? { audio: { output: { voice: params.req.voice } } } : {}),
+    audio: {
+      input: {
+        turn_detection: {
+          type: "server_vad",
+          create_response: true,
+          interrupt_response: true,
+          ...(typeof params.req.vadThreshold === "number"
+            ? { threshold: params.req.vadThreshold }
+            : {}),
+          ...(typeof params.req.prefixPaddingMs === "number"
+            ? { prefix_padding_ms: params.req.prefixPaddingMs }
+            : {}),
+          ...(typeof params.req.silenceDurationMs === "number"
+            ? { silence_duration_ms: params.req.silenceDurationMs }
+            : {}),
+        },
+      },
+      ...(params.req.voice ? { output: { voice: params.req.voice } } : {}),
+    },
     ...(tools?.length ? { tools, tool_choice: "auto" } : {}),
   };
   const { response, release } = await fetchWithSsrFGuard({
@@ -174,11 +217,16 @@ export async function createCloudsigmaBrowserSession(
   const browserOrigin = requireExactBrowserOrigin(config.browserOrigin);
   const apiKey = await resolveCloudsigmaTalkApiKey(req);
   const clientSecret = await requestClientSecret({ apiKey, browserOrigin, req });
+  const model = clientSecret.model ?? CLOUDSIGMA_REALTIME_MODEL;
+  const voice = clientSecret.voice ?? req.voice;
   return {
     provider: CLOUDSIGMA_REALTIME_PROVIDER_ID,
     transport: "webrtc",
-    clientSecret,
+    clientSecret: clientSecret.value,
     offerUrl: CLOUDSIGMA_REALTIME_CALLS_URL,
+    model,
+    ...(voice ? { voice } : {}),
+    ...(clientSecret.expiresAt !== undefined ? { expiresAt: clientSecret.expiresAt } : {}),
   };
 }
 

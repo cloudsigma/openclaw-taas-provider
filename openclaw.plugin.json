@@ -33,6 +33,16 @@
     "type": "object"
   },
   "enabledByDefault": true,
+  "configContracts": {
+    "secretInputs": {
+      "paths": [
+        {
+          "path": "apiKey",
+          "expected": "string"
+        }
+      ]
+    }
+  },
   "modelCatalog": {
     "aliases": {
       "cloudsigma-taas": {
