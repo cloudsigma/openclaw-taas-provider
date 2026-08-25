@@ -1,6 +1,6 @@
 {
   "name": "@cloudsigma/openclaw-taas-provider",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "First-class OpenClaw provider plugin for CloudSigma TaaS: OpenAI-compatible multi-model gateway, API-key onboarding, static catalog, live model discovery, streaming usage, and tool-call compatibility.",
   "type": "module",
   "main": "dist/index.js",
@@ -34,11 +34,11 @@
     "url": "https://github.com/cloudsigma/openclaw-taas-provider"
   },
   "peerDependencies": {
-    "openclaw": ">=2026.6.6"
+    "openclaw": ">=2026.7.1-2"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "openclaw": "2026.6.6",
+    "openclaw": "2026.7.1-2",
     "typescript": "^5.9.0",
     "vitest": "^4.0.0"
   },
@@ -49,17 +49,20 @@
     "install": {
       "clawhubSpec": "clawhub:@cloudsigma/openclaw-taas-provider",
       "defaultChoice": "clawhub",
-      "minHostVersion": ">=2026.6.6"
+      "minHostVersion": ">=2026.7.1-2"
     },
     "compat": {
-      "pluginApi": ">=2026.6.6",
-      "minGatewayVersion": "2026.6.6"
+      "pluginApi": ">=2026.7.1-2",
+      "minGatewayVersion": "2026.7.1-2"
     },
     "build": {
-      "openclawVersion": "2026.6.6",
-      "pluginSdkVersion": "2026.6.6"
+      "openclawVersion": "2026.7.1-2",
+      "pluginSdkVersion": "2026.7.1-2"
     },
     "providers": [
+      "cloudsigma"
+    ],
+    "realtimeVoiceProviders": [
       "cloudsigma"
     ]
   },

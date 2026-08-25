@@ -9,10 +9,11 @@ import {
   buildCloudsigmaProvider,
   buildCloudsigmaProviderWithDiscovery,
 } from "./provider-catalog.js";
+import { buildCloudsigmaRealtimeVoiceProvider } from "./realtime-voice.js";
 
 const PROVIDER_ID = "cloudsigma";
 
-const plugin: OpenClawPluginDefinition = defineSingleProviderPluginEntry({
+const providerPlugin = defineSingleProviderPluginEntry({
   id: PROVIDER_ID,
   name: "CloudSigma TaaS Provider",
   description: "CloudSigma TaaS provider plugin",
@@ -59,5 +60,13 @@ const plugin: OpenClawPluginDefinition = defineSingleProviderPluginEntry({
     ...buildProviderToolCompatFamilyHooks("openai"),
   },
 });
+
+const plugin: OpenClawPluginDefinition = {
+  ...providerPlugin,
+  register(api) {
+    providerPlugin.register?.(api);
+    api.registerRealtimeVoiceProvider(buildCloudsigmaRealtimeVoiceProvider());
+  },
+};
 
 export default plugin;

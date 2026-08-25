@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0
+
+- Add first-class CloudSigma realtime Talk registration for browser WebRTC.
+- Mint scoped credentials through the fixed TaaS client-secret endpoint for `gpt-realtime-2.1`.
+- Add strict credential precedence, exact browser-origin binding, SSRF/redirect protections, bounded response parsing, and GA/legacy response compatibility.
+- Upgrade the public OpenClaw plugin SDK contract to `2026.7.1-2`.
+
 ## 0.1.2
 
 - Expands the public README/ClawHub listing with full install, setup, model catalog, discovery, security, compatibility, validation, and troubleshooting documentation.

@@ -5,6 +5,7 @@ import plugin from "./index.js";
 async function registerSingleProviderPluginForTest() {
   const providers: Array<Record<string, any>> = [];
   const modelCatalogProviders: Array<Record<string, any>> = [];
+  const realtimeVoiceProviders: Array<Record<string, any>> = [];
 
   plugin.register?.({
     registerProvider(provider: Record<string, any>) {
@@ -13,11 +14,15 @@ async function registerSingleProviderPluginForTest() {
     registerModelCatalogProvider(provider: Record<string, any>) {
       modelCatalogProviders.push(provider);
     },
+    registerRealtimeVoiceProvider(provider: Record<string, any>) {
+      realtimeVoiceProviders.push(provider);
+    },
   } as never);
 
   expect(providers).toHaveLength(1);
   expect(modelCatalogProviders).toHaveLength(1);
-  return providers[0]!;
+  expect(realtimeVoiceProviders).toHaveLength(1);
+  return { provider: providers[0]!, realtimeVoiceProvider: realtimeVoiceProviders[0]! };
 }
 
 function requireCatalogProvider(
@@ -35,7 +40,7 @@ function requireCatalogProvider(
 
 describe("cloudsigma provider plugin", () => {
   it("registers CloudSigma TaaS as an OpenAI-compatible provider", async () => {
-    const provider = await registerSingleProviderPluginForTest();
+    const { provider, realtimeVoiceProvider } = await registerSingleProviderPluginForTest();
 
     expect(provider.id).toBe("cloudsigma");
     expect(provider.aliases).toEqual(["cloudsigma-taas"]);
@@ -50,5 +55,10 @@ describe("cloudsigma provider plugin", () => {
     const catalogProvider = requireCatalogProvider(result);
     expect(catalogProvider.baseUrl).toBe("https://taas.cloudsigma.com/v1");
     expect(catalogProvider.models?.map((model) => model.id)).toContain("gpt-5.5");
+    expect(realtimeVoiceProvider).toMatchObject({
+      id: "cloudsigma",
+      defaultModel: "gpt-realtime-2.1",
+      capabilities: { transports: ["webrtc"], supportsBrowserSession: true },
+    });
   });
 });
