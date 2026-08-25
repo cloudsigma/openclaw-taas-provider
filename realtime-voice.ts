@@ -1,4 +1,5 @@
 import { isProviderAuthProfileConfigured, resolveProviderAuthProfileApiKey } from "openclaw/plugin-sdk/provider-auth";
+import { resolvePluginConfigObject } from "openclaw/plugin-sdk/plugin-config-runtime";
 import { readProviderJsonResponse, readResponseTextLimited } from "openclaw/plugin-sdk/provider-http";
 import type {
   RealtimeVoiceBrowserSession,
@@ -245,7 +246,13 @@ export function buildCloudsigmaRealtimeVoiceProvider(): RealtimeVoiceProviderPlu
       handlesInputAudioBargeIn: true,
       supportsToolCalls: true,
     },
-    resolveConfig: ({ rawConfig }) => normalizeConfig(rawConfig),
+    resolveConfig: ({ cfg, rawConfig }) => {
+      const pluginConfig = resolvePluginConfigObject(cfg, CLOUDSIGMA_REALTIME_PROVIDER_ID) ?? {};
+      // Talk has no provider-local options today. In particular, never let raw
+      // Talk config override the manifest-owned credential or browser origin.
+      void rawConfig;
+      return normalizeConfig(pluginConfig);
+    },
     isConfigured: ({ cfg, providerConfig }) => {
       const config = normalizeConfig(providerConfig);
       const hasOrigin = (() => {

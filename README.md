@@ -108,6 +108,8 @@ Talk credential precedence is deliberately isolated from OpenAI authentication:
 
 OpenAI API keys, OpenAI/Codex OAuth, and external OpenAI CLI credentials are never considered. The long-lived key remains server-side; the browser receives only the short-lived client secret and the fixed offer URL `https://taas.cloudsigma.com/v1/realtime/calls`.
 
+`apiKey` and `browserOrigin` are authoritative only in `plugins.entries.cloudsigma.config`. Values with those names under `talk.realtime.providers.cloudsigma` are ignored; there are currently no supported provider-local Talk fields. OpenClaw materializes plugin `SecretInput` references before provider resolution, and the resolved configuration is then passed unchanged through readiness checks and browser-session minting.
+
 Browser sessions are minted with OpenAI-compatible `audio.input.turn_detection` server VAD, automatic response creation, and response interruption enabled. OpenClaw's `vadThreshold`, `prefixPaddingMs`, and `silenceDurationMs` Talk options are forwarded when set. This provider therefore advertises server-VAD barge-in support for its browser WebRTC transport.
 
 ## Onboarding behavior

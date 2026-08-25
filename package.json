@@ -29,6 +29,9 @@
   ],
   "author": "CloudSigma",
   "license": "MIT",
+  "engines": {
+    "node": ">=22.22.3 <23 || >=24.15.0 <25 || >=25.9.0"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/cloudsigma/openclaw-taas-provider"

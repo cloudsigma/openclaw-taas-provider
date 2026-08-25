@@ -56,6 +56,52 @@ afterEach(() => {
 });
 
 describe("CloudSigma Talk provider", () => {
+  it("resolves credentials only from authoritative plugin-owned config", () => {
+    const provider = buildCloudsigmaRealtimeVoiceProvider();
+    const providerConfig = provider.resolveConfig?.({
+      cfg: {
+        plugins: {
+          entries: {
+            cloudsigma: {
+              config: {
+                apiKey: "plugin-key",
+                browserOrigin: "https://plugin.example",
+              },
+            },
+          },
+        },
+      },
+      rawConfig: {
+        apiKey: "ignored-talk-key",
+        browserOrigin: "https://ignored.example",
+        unsupported: true,
+      },
+    });
+
+    expect(providerConfig).toEqual({
+      apiKey: "plugin-key",
+      browserOrigin: "https://plugin.example",
+    });
+  });
+
+  it("fails closed when plugin-owned browserOrigin is missing or invalid", () => {
+    const provider = buildCloudsigmaRealtimeVoiceProvider();
+    for (const pluginConfig of [
+      { apiKey: "plugin-key" },
+      { apiKey: "plugin-key", browserOrigin: "http://plugin.example" },
+    ]) {
+      const cfg = { plugins: { entries: { cloudsigma: { config: pluginConfig } } } };
+      const providerConfig = provider.resolveConfig?.({
+        cfg,
+        rawConfig: {
+          apiKey: "ignored-talk-key",
+          browserOrigin: "https://ignored-valid.example",
+        },
+      });
+      expect(provider.isConfigured({ cfg, providerConfig: providerConfig ?? {} })).toBe(false);
+    }
+  });
+
   it("exposes only the approved WebRTC model and fails closed for bridges", () => {
     const provider = buildCloudsigmaRealtimeVoiceProvider();
     expect(provider).toMatchObject({
