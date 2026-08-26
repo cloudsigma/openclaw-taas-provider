@@ -81,6 +81,7 @@ describe("CloudSigma Talk provider", () => {
     expect(providerConfig).toEqual({
       apiKey: "plugin-key",
       browserOrigin: "https://plugin.example",
+      realtimeRequestTimeoutMs: 25_000,
     });
   });
 
@@ -195,6 +196,32 @@ describe("CloudSigma Talk provider", () => {
     expect(fetchWithSsrFGuard.mock.calls[0]![0].init.headers.Authorization).toBe("Bearer taas-env");
   });
 
+  it("clamps the configurable realtime mint timeout without weakening request policy", async () => {
+    fetchWithSsrFGuard.mockResolvedValue(guardedJson({ value: "ephemeral" }));
+
+    for (const [configured, expected] of [
+      [1_000, 5_000],
+      [20_000.9, 20_000],
+      [90_000, 60_000],
+      [Number.NaN, 25_000],
+    ] as const) {
+      fetchWithSsrFGuard.mockReset();
+      fetchWithSsrFGuard.mockResolvedValue(guardedJson({ value: "ephemeral" }));
+      await createCloudsigmaBrowserSession(
+        request({
+          apiKey: "key",
+          browserOrigin: "https://studio.example",
+          realtimeRequestTimeoutMs: configured,
+        }),
+      );
+      expect(fetchWithSsrFGuard.mock.calls[0]![0]).toMatchObject({
+        timeoutMs: expected,
+        policy: { allowedOrigin: CLOUDSIGMA_REALTIME_ORIGIN },
+        init: { method: "POST", redirect: "error" },
+      });
+    }
+  });
+
   it("pins endpoints and mints an OpenAI-compatible server-VAD session without dropping options", async () => {
     fetchWithSsrFGuard.mockResolvedValue(
       guardedJson({
@@ -226,7 +253,7 @@ describe("CloudSigma Talk provider", () => {
     const call = fetchWithSsrFGuard.mock.calls[0]![0];
     expect(call).toMatchObject({
       url: CLOUDSIGMA_REALTIME_CLIENT_SECRETS_URL,
-      timeoutMs: 10_000,
+      timeoutMs: 25_000,
       policy: { allowedOrigin: CLOUDSIGMA_REALTIME_ORIGIN },
       init: {
         method: "POST",

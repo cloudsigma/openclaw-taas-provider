@@ -72,6 +72,7 @@ describe("plugin secret-input contract", () => {
     expect(resolved.providerConfig).toEqual({
       apiKey: "materialized-key",
       browserOrigin: "https://studio.example",
+      realtimeRequestTimeoutMs: 25_000,
     });
 
     const release = vi.fn(async () => undefined);

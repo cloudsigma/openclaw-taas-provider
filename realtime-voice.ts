@@ -18,7 +18,9 @@ export const CLOUDSIGMA_REALTIME_ORIGIN = "https://taas.cloudsigma.com";
 export const CLOUDSIGMA_REALTIME_CLIENT_SECRETS_URL = `${CLOUDSIGMA_REALTIME_ORIGIN}/v1/realtime/client_secrets`;
 export const CLOUDSIGMA_REALTIME_CALLS_URL = `${CLOUDSIGMA_REALTIME_ORIGIN}/v1/realtime/calls`;
 
-const REQUEST_TIMEOUT_MS = 10_000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 25_000;
+const MIN_REQUEST_TIMEOUT_MS = 5_000;
+const MAX_REQUEST_TIMEOUT_MS = 60_000;
 const MAX_JSON_BYTES = 64 * 1024;
 const MAX_ERROR_BYTES = 4 * 1024;
 const API_KEY_PATH = "plugins.entries.cloudsigma.config.apiKey";
@@ -26,6 +28,7 @@ const API_KEY_PATH = "plugins.entries.cloudsigma.config.apiKey";
 export interface CloudsigmaRealtimeConfig extends Record<string, unknown> {
   apiKey?: SecretInput;
   browserOrigin?: string;
+  realtimeRequestTimeoutMs?: number;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -40,6 +43,13 @@ function normalizeConfig(raw: Record<string, unknown>): CloudsigmaRealtimeConfig
   return {
     apiKey: raw.apiKey as SecretInput | undefined,
     browserOrigin: typeof raw.browserOrigin === "string" ? raw.browserOrigin : undefined,
+    realtimeRequestTimeoutMs:
+      typeof raw.realtimeRequestTimeoutMs === "number" && Number.isFinite(raw.realtimeRequestTimeoutMs)
+        ? Math.min(
+            MAX_REQUEST_TIMEOUT_MS,
+            Math.max(MIN_REQUEST_TIMEOUT_MS, Math.floor(raw.realtimeRequestTimeoutMs)),
+          )
+        : DEFAULT_REQUEST_TIMEOUT_MS,
   };
 }
 
@@ -138,6 +148,7 @@ export function parseCloudsigmaClientSecret(payload: unknown): CloudsigmaClientS
 async function requestClientSecret(params: {
   apiKey: string;
   browserOrigin: string;
+  timeoutMs: number;
   req: RealtimeVoiceBrowserSessionCreateRequest;
 }): Promise<CloudsigmaClientSecret> {
   const tools = params.req.tools?.map((tool) => ({
@@ -184,7 +195,7 @@ async function requestClientSecret(params: {
       },
       body: JSON.stringify({ session }),
     },
-    timeoutMs: REQUEST_TIMEOUT_MS,
+    timeoutMs: params.timeoutMs,
     policy: ssrfPolicyFromHttpBaseUrlAllowedOrigin(CLOUDSIGMA_REALTIME_ORIGIN),
     auditContext: "cloudsigma.realtime.client_secret",
   });
@@ -217,7 +228,12 @@ export async function createCloudsigmaBrowserSession(
   const config = normalizeConfig(req.providerConfig);
   const browserOrigin = requireExactBrowserOrigin(config.browserOrigin);
   const apiKey = await resolveCloudsigmaTalkApiKey(req);
-  const clientSecret = await requestClientSecret({ apiKey, browserOrigin, req });
+  const clientSecret = await requestClientSecret({
+    apiKey,
+    browserOrigin,
+    timeoutMs: config.realtimeRequestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
+    req,
+  });
   const model = clientSecret.model ?? CLOUDSIGMA_REALTIME_MODEL;
   const voice = clientSecret.voice ?? req.voice;
   return {

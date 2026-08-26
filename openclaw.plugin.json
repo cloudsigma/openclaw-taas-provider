@@ -1,7 +1,7 @@
 {
   "id": "cloudsigma",
   "name": "CloudSigma TaaS Provider",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "First-class OpenClaw provider plugin for CloudSigma TaaS: OpenAI-compatible multi-model gateway with API-key onboarding, static catalog, live discovery, streaming usage, and tool-call compatibility.",
   "activation": {
     "onStartup": false
@@ -28,6 +28,12 @@
         "description": "Exact HTTPS browser origin allowed to use CloudSigma Talk ephemeral credentials.",
         "format": "uri",
         "type": "string"
+      },
+      "realtimeRequestTimeoutMs": {
+        "description": "Bounded timeout for CloudSigma Talk client-secret minting in milliseconds (default 25000; clamped to 5000-60000).",
+        "minimum": 5000,
+        "maximum": 60000,
+        "type": "integer"
       }
     },
     "type": "object"

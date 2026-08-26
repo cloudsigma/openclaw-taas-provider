@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Raise the bounded realtime client-secret mint deadline to 25 seconds, with an explicit 5–60 second plugin configuration range, while preserving one-attempt semantics and all SSRF, redirect, body-size, and credential-redaction safeguards.
+
 ## 0.2.0
 
 - Add first-class CloudSigma realtime Talk registration for browser WebRTC.

@@ -85,7 +85,8 @@ CloudSigma Talk is registered as realtime voice provider `cloudsigma`. It curren
         config: {
           // Optional. SecretInput literals and secret references are supported.
           apiKey: { source: "env", provider: "default", id: "CLOUDSIGMA_API_KEY" },
-          browserOrigin: "https://openclaw.example.com"
+          browserOrigin: "https://openclaw.example.com",
+          realtimeRequestTimeoutMs: 25000
         }
       }
     }
@@ -108,7 +109,7 @@ Talk credential precedence is deliberately isolated from OpenAI authentication:
 
 OpenAI API keys, OpenAI/Codex OAuth, and external OpenAI CLI credentials are never considered. The long-lived key remains server-side; the browser receives only the short-lived client secret and the fixed offer URL `https://taas.cloudsigma.com/v1/realtime/calls`.
 
-`apiKey` and `browserOrigin` are authoritative only in `plugins.entries.cloudsigma.config`. Values with those names under `talk.realtime.providers.cloudsigma` are ignored; there are currently no supported provider-local Talk fields. OpenClaw materializes plugin `SecretInput` references before provider resolution, and the resolved configuration is then passed unchanged through readiness checks and browser-session minting.
+`apiKey`, `browserOrigin`, and `realtimeRequestTimeoutMs` are authoritative only in `plugins.entries.cloudsigma.config`. Values with those names under `talk.realtime.providers.cloudsigma` are ignored; there are currently no supported provider-local Talk fields. OpenClaw materializes plugin `SecretInput` references before provider resolution, and the resolved configuration is then passed unchanged through readiness checks and browser-session minting. The realtime mint timeout defaults to 25 seconds and is clamped to 5–60 seconds; it remains a single bounded attempt and does not retry or reuse ephemeral credentials.
 
 Browser sessions are minted with OpenAI-compatible `audio.input.turn_detection` server VAD, automatic response creation, and response interruption enabled. OpenClaw's `vadThreshold`, `prefixPaddingMs`, and `silenceDurationMs` Talk options are forwarded when set. This provider therefore advertises server-VAD barge-in support for its browser WebRTC transport.
 
