@@ -26,6 +26,7 @@ import {
   buildCloudsigmaRealtimeVoiceProvider,
   CLOUDSIGMA_REALTIME_CALLS_URL,
   CLOUDSIGMA_REALTIME_CLIENT_SECRETS_URL,
+  CLOUDSIGMA_REALTIME_INPUT_TRANSCRIPTION_MODEL,
   CLOUDSIGMA_REALTIME_MODEL,
   CLOUDSIGMA_REALTIME_ORIGIN,
   createCloudsigmaBrowserSession,
@@ -268,6 +269,7 @@ describe("CloudSigma Talk provider", () => {
         instructions: "Keep answers concise",
         audio: {
           input: {
+            transcription: { model: CLOUDSIGMA_REALTIME_INPUT_TRANSCRIPTION_MODEL },
             turn_detection: {
               type: "server_vad",
               create_response: true,

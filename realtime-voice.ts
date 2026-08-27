@@ -14,6 +14,7 @@ import { fetchWithSsrFGuard, ssrfPolicyFromHttpBaseUrlAllowedOrigin } from "open
 
 export const CLOUDSIGMA_REALTIME_PROVIDER_ID = "cloudsigma";
 export const CLOUDSIGMA_REALTIME_MODEL = "gpt-realtime-2.1";
+export const CLOUDSIGMA_REALTIME_INPUT_TRANSCRIPTION_MODEL = "gpt-4o-mini-transcribe";
 export const CLOUDSIGMA_REALTIME_ORIGIN = "https://taas.cloudsigma.com";
 export const CLOUDSIGMA_REALTIME_CLIENT_SECRETS_URL = `${CLOUDSIGMA_REALTIME_ORIGIN}/v1/realtime/client_secrets`;
 export const CLOUDSIGMA_REALTIME_CALLS_URL = `${CLOUDSIGMA_REALTIME_ORIGIN}/v1/realtime/calls`;
@@ -163,6 +164,7 @@ async function requestClientSecret(params: {
     ...(params.req.instructions ? { instructions: params.req.instructions } : {}),
     audio: {
       input: {
+        transcription: { model: CLOUDSIGMA_REALTIME_INPUT_TRANSCRIPTION_MODEL },
         turn_detection: {
           type: "server_vad",
           create_response: true,

@@ -1,7 +1,7 @@
 {
   "id": "cloudsigma",
   "name": "CloudSigma TaaS Provider",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "First-class OpenClaw provider plugin for CloudSigma TaaS: OpenAI-compatible multi-model gateway with API-key onboarding, static catalog, live discovery, streaming usage, and tool-call compatibility.",
   "activation": {
     "onStartup": false
