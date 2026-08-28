@@ -4,7 +4,7 @@
 
 OpenClaw provider plugin for **CloudSigma TaaS** — an OpenAI-compatible, multi-model gateway that exposes CloudSigma-hosted model routes through one OpenClaw provider.
 
-This plugin lets OpenClaw use CloudSigma TaaS as a first-class model provider with API-key onboarding, a conservative static model catalog, live model discovery when credentials are available, and OpenAI-compatible request handling.
+This plugin lets OpenClaw use CloudSigma TaaS as a first-class model provider with API-key onboarding, a conservative static model catalog, live model discovery when credentials are available, OpenAI-compatible request handling, and browser WebRTC Talk through `gpt-realtime-2.1`.
 
 ## What this plugin provides
 
@@ -47,7 +47,7 @@ https://github.com/cloudsigma/openclaw-taas-provider
 
 ## Requirements
 
-- OpenClaw `>=2026.6.6`
+- OpenClaw `>=2026.7.1-2`
 - A CloudSigma TaaS API key
 - Network access to `https://taas.cloudsigma.com/v1`
 
@@ -68,6 +68,50 @@ cloudsigma/gemini-3.1-flash-lite
 ```
 
 The provider alias `cloudsigma-taas` resolves to the same provider auth as `cloudsigma`.
+
+### Realtime Talk (WebRTC)
+
+CloudSigma Talk is registered as realtime voice provider `cloudsigma`. It currently supports browser WebRTC only and uses the fixed model `gpt-realtime-2.1`.
+
+> [!IMPORTANT]
+> **In OpenClaw `2026.7.1-2`, `browserOrigin` is static plugin configuration; it is not inferred from each browser request. It must exactly equal the active OpenClaw UI origin and an origin on the CloudSigma TaaS allowlist.** Scheme, hostname, and port must all match. If the UI is served from another origin (including another port), update this setting and the TaaS allowlist before using Talk. Do not use a page URL: paths, queries, fragments, credentials, and a trailing slash are rejected.
+
+```json5
+{
+  plugins: {
+    entries: {
+      cloudsigma: {
+        enabled: true,
+        config: {
+          // Optional. SecretInput literals and secret references are supported.
+          apiKey: { source: "env", provider: "default", id: "CLOUDSIGMA_API_KEY" },
+          browserOrigin: "https://openclaw.example.com",
+          realtimeRequestTimeoutMs: 25000
+        }
+      }
+    }
+  },
+  talk: {
+    realtime: {
+      provider: "cloudsigma",
+      transport: "webrtc"
+    }
+  }
+}
+```
+
+Talk credential precedence is deliberately isolated from OpenAI authentication:
+
+1. Explicit `plugins.entries.cloudsigma.config.apiKey`
+2. A CloudSigma `api_key` auth profile
+3. `CLOUDSIGMA_API_KEY`
+4. `TAAS_API_KEY`
+
+OpenAI API keys, OpenAI/Codex OAuth, and external OpenAI CLI credentials are never considered. The long-lived key remains server-side; the browser receives only the short-lived client secret and the fixed offer URL `https://taas.cloudsigma.com/v1/realtime/calls`.
+
+`apiKey`, `browserOrigin`, and `realtimeRequestTimeoutMs` are authoritative only in `plugins.entries.cloudsigma.config`. Values with those names under `talk.realtime.providers.cloudsigma` are ignored; there are currently no supported provider-local Talk fields. OpenClaw materializes plugin `SecretInput` references before provider resolution, and the resolved configuration is then passed unchanged through readiness checks and browser-session minting. The realtime mint timeout defaults to 25 seconds and is clamped to 5–60 seconds; it remains a single bounded attempt and does not retry or reuse ephemeral credentials.
+
+Browser sessions are minted with OpenAI-compatible `audio.input.turn_detection` server VAD, automatic response creation, and response interruption enabled. OpenClaw's `vadThreshold`, `prefixPaddingMs`, and `silenceDurationMs` Talk options are forwarded when set. This provider therefore advertises server-VAD barge-in support for its browser WebRTC transport.
 
 ## Onboarding behavior
 
@@ -124,6 +168,8 @@ Discovery behavior:
 - The plugin does not store API keys in the package.
 - Authentication is delegated to OpenClaw provider auth via `CLOUDSIGMA_API_KEY` / setup flow.
 - Model discovery uses OpenClaw's SSRF-safe fetch helpers and restricts network access to the configured CloudSigma TaaS hostname.
+- Talk client-secret minting is pinned to the exact `https://taas.cloudsigma.com` origin, denies redirects, bounds JSON and error bodies, and rejects conflicting GA/legacy credentials.
+- Realtime server bridges fail closed; the initial Talk implementation is browser WebRTC only.
 - The package manifest declares no tools, services, HTTP routes, bundled skills, or background daemons.
 - The plugin executes provider registration code only; it does not install native dependencies.
 
@@ -137,12 +183,12 @@ This package declares the OpenClaw compatibility and build contract required for
     "extensions": ["./dist/index.js"],
     "providers": ["cloudsigma"],
     "compat": {
-      "pluginApi": ">=2026.6.6",
-      "minGatewayVersion": "2026.6.6"
+      "pluginApi": ">=2026.7.1-2",
+      "minGatewayVersion": "2026.7.1-2"
     },
     "build": {
-      "openclawVersion": "2026.6.6",
-      "pluginSdkVersion": "2026.6.6"
+      "openclawVersion": "2026.7.1-2",
+      "pluginSdkVersion": "2026.7.1-2"
     }
   }
 }

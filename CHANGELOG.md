@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.2
+
+- Request `gpt-4o-mini-transcribe` input transcription in browser WebRTC sessions so completed speech produces the final transcript required by OpenClaw agent consults.
+
+## 0.2.1
+
+- Raise the bounded realtime client-secret mint deadline to 25 seconds, with an explicit 5–60 second plugin configuration range, while preserving one-attempt semantics and all SSRF, redirect, body-size, and credential-redaction safeguards.
+
+## 0.2.0
+
+- Add first-class CloudSigma realtime Talk registration for browser WebRTC.
+- Mint scoped credentials through the fixed TaaS client-secret endpoint for `gpt-realtime-2.1`.
+- Add strict credential precedence, exact browser-origin binding, SSRF/redirect protections, bounded response parsing, and GA/legacy response compatibility.
+- Materialize plugin `apiKey` SecretRefs through the OpenClaw runtime config contract.
+- Mint browser sessions with OpenAI-compatible server VAD and return effective expiry/model/voice metadata.
+- Document the static `browserOrigin` requirement in OpenClaw `2026.7.1-2`.
+- Upgrade the public OpenClaw plugin SDK contract to `2026.7.1-2`.
+
 ## 0.1.2
 
 - Expands the public README/ClawHub listing with full install, setup, model catalog, discovery, security, compatibility, validation, and troubleshooting documentation.
