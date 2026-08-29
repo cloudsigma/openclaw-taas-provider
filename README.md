@@ -1,10 +1,10 @@
-# CloudSigma TaaS Provider for OpenClaw
+# CloudSigma AI Mission Control
 
 [![CI](https://github.com/cloudsigma/openclaw-taas-provider/actions/workflows/ci.yml/badge.svg)](https://github.com/cloudsigma/openclaw-taas-provider/actions/workflows/ci.yml)
 
-OpenClaw provider plugin for **CloudSigma TaaS** — an OpenAI-compatible, multi-model gateway that exposes CloudSigma-hosted model routes through one OpenClaw provider.
+**One plugin. Every leading AI model.** Connect OpenClaw to CloudSigma Mission Control for GPT, Claude, Gemini, Kimi, Qwen and more—with streaming, tool calling, live model discovery, session affinity, optimised autorouter and prompt-cache-aware routing built in.
 
-This plugin lets OpenClaw use CloudSigma TaaS as a first-class model provider with API-key onboarding, a conservative static model catalog, live model discovery when credentials are available, OpenAI-compatible request handling, native OpenClaw session affinity, and browser WebRTC Talk through `gpt-realtime-2.1`.
+CloudSigma AI Mission Control is the first-class OpenClaw provider for CloudSigma TaaS. It includes API-key onboarding, a conservative static model catalog, OpenAI-compatible request handling, native OpenClaw session affinity, and browser WebRTC Talk through `gpt-realtime-2.1`.
 
 ## What this plugin provides
 
@@ -56,12 +56,12 @@ https://github.com/cloudsigma/openclaw-taas-provider
 ## Requirements
 
 - OpenClaw `>=2026.7.1-2`
-- A CloudSigma TaaS API key
+- A CloudSigma Mission Control API key
 - Network access to `https://taas.cloudsigma.com/v1`
 
 ## Configure
 
-Set the CloudSigma TaaS API key in the OpenClaw runtime environment:
+Set the CloudSigma Mission Control API key in the OpenClaw runtime environment:
 
 ```bash
 export CLOUDSIGMA_API_KEY=...
@@ -182,12 +182,12 @@ Browser sessions are minted with OpenAI-compatible `audio.input.turn_detection` 
 
 During OpenClaw provider setup, the plugin exposes an API-key auth choice:
 
-- Label: `CloudSigma TaaS API key`
+- Label: `CloudSigma Mission Control API key`
 - CLI flag: `--cloudsigma-api-key <key>`
 - Environment variable: `CLOUDSIGMA_API_KEY`
 - Default model: `cloudsigma/gpt-5.5`
 
-The plugin writes the CloudSigma provider catalog into OpenClaw config and adds a friendly alias named `CloudSigma TaaS` for the default model.
+The plugin writes the CloudSigma provider catalog into OpenClaw config and retains the existing `CloudSigma TaaS` default-model alias for compatibility.
 
 ## Static catalog included in the package
 

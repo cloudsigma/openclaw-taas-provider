@@ -499,31 +499,32 @@ function warnOnLegacyAffinityCoexistence(api: OpenClawPluginApi): void {
 
 const providerPlugin = defineSingleProviderPluginEntry({
   id: PROVIDER_ID,
-  name: "CloudSigma TaaS Provider",
-  description: "CloudSigma TaaS provider plugin",
+  name: "CloudSigma AI Mission Control",
+  description:
+    "One plugin. Every leading AI model. Connect OpenClaw to CloudSigma Mission Control with streaming, tool calling, live model discovery, session affinity, optimised autorouter, and prompt-cache-aware routing.",
   provider: {
-    label: "CloudSigma TaaS",
+    label: "CloudSigma AI Mission Control",
     docsPath: "/providers/cloudsigma",
     aliases: ["cloudsigma-taas"],
     envVars: ["CLOUDSIGMA_API_KEY"],
     auth: [
       {
         methodId: "api-key",
-        label: "CloudSigma TaaS API key",
+        label: "CloudSigma Mission Control API key",
         hint: "OpenAI-compatible multi-model gateway",
         optionKey: "cloudsigmaApiKey",
         flagName: "--cloudsigma-api-key",
         envVar: "CLOUDSIGMA_API_KEY",
-        promptMessage: "Enter CloudSigma TaaS API key",
+        promptMessage: "Enter CloudSigma Mission Control API key",
         defaultModel: CLOUDSIGMA_DEFAULT_MODEL_REF,
         applyConfig: (cfg) => applyCloudsigmaConfig(cfg),
         noteMessage: [
-          "CloudSigma TaaS is an OpenAI-compatible multi-model gateway: Claude, GPT, Gemini, Kimi, Qwen, GLM, Llama, and Pixtral routes behind one key.",
+          "CloudSigma Mission Control is an OpenAI-compatible multi-model gateway: Claude, GPT, Gemini, Kimi, Qwen, GLM, Llama, and Pixtral routes behind one key.",
           "Create an API key at: https://taas.cloudsigma.com",
         ].join("\n"),
-        noteTitle: "CloudSigma TaaS",
+        noteTitle: "CloudSigma AI Mission Control",
         wizard: {
-          groupLabel: "CloudSigma TaaS",
+          groupLabel: "CloudSigma AI Mission Control",
           groupHint: "OpenAI-compatible multi-model gateway",
         },
       },

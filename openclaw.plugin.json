@@ -1,8 +1,8 @@
 {
   "id": "cloudsigma",
-  "name": "CloudSigma TaaS Provider",
-  "version": "0.2.3",
-  "description": "First-class OpenClaw provider plugin for CloudSigma TaaS: OpenAI-compatible multi-model gateway with API-key onboarding, static catalog, live discovery, streaming usage, and tool-call compatibility.",
+  "name": "CloudSigma AI Mission Control",
+  "version": "0.2.4",
+  "description": "One plugin. Every leading AI model. Connect OpenClaw to CloudSigma Mission Control for GPT, Claude, Gemini, Kimi, Qwen and more—with streaming, tool calling, live model discovery, session affinity, optimised autorouter and prompt-cache-aware routing built in.",
   "activation": {
     "onStartup": true
   },
@@ -286,13 +286,13 @@
     {
       "choiceHint": "OpenAI-compatible multi-model gateway",
       "choiceId": "cloudsigma-api-key",
-      "choiceLabel": "CloudSigma TaaS API key",
-      "cliDescription": "CloudSigma TaaS API key",
+      "choiceLabel": "CloudSigma Mission Control API key",
+      "cliDescription": "CloudSigma Mission Control API key",
       "cliFlag": "--cloudsigma-api-key",
       "cliOption": "--cloudsigma-api-key <key>",
       "groupHint": "OpenAI-compatible multi-model gateway",
       "groupId": "cloudsigma",
-      "groupLabel": "CloudSigma TaaS",
+      "groupLabel": "CloudSigma AI Mission Control",
       "method": "api-key",
       "optionKey": "cloudsigmaApiKey",
       "provider": "cloudsigma"

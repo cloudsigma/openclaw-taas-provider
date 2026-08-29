@@ -29,8 +29,8 @@ npx -y clawhub@0.21.0 package publish . \
   --family code-plugin \
   --owner cloudsigma \
   --name @cloudsigma/openclaw-taas-provider \
-  --display-name "CloudSigma TaaS Provider" \
-  --version 0.1.0 \
+  --display-name "CloudSigma AI Mission Control" \
+  --version 0.2.4 \
   --tags latest \
   --source-repo cloudsigma/openclaw-taas-provider \
   --source-ref main \

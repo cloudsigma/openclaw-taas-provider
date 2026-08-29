@@ -19,6 +19,8 @@ const cloudsigmaPresetAppliers = createModelCatalogPresetAppliers({
     api: "openai-completions",
     baseUrl: CLOUDSIGMA_BASE_URL,
     catalogModels: CLOUDSIGMA_MODEL_CATALOG.map(buildCloudsigmaModelDefinition),
+    // Keep the existing model alias stable; public plugin branding is independent
+    // from model-reference compatibility in existing OpenClaw configurations.
     aliases: [{ modelRef: CLOUDSIGMA_DEFAULT_MODEL_REF, alias: "CloudSigma TaaS" }],
   }),
 });
