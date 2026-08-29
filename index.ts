@@ -23,6 +23,8 @@ const CORRELATION_SCHEMA_VERSION = "2026-08-29";
 const CORRELATION_SOURCE = "@cloudsigma/openclaw-taas-provider";
 const IDENTITY_LIMIT = 200;
 const AUTOROUTER_SESSION_LIMIT = 256;
+const TRACE_BRIDGE_LIMIT = 1024;
+const TRACE_BRIDGE_TTL_MS = 30 * 60 * 1000;
 const AUTOROUTER_ALGORITHMS = new Set([
   "best_fit",
   "price_performance",
@@ -60,6 +62,167 @@ function asRecord(value: unknown): JsonRecord | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as JsonRecord)
     : undefined;
+}
+
+type TraceBridgeEntry = {
+  sessionId: string | null;
+  ambiguous: boolean;
+  expiresAt: number;
+};
+
+/**
+ * Correlates a public model-call lifecycle event with the later provider
+ * invocation only when both sides contain the same complete W3C trace/span.
+ * Entries are non-consuming for retry safety and are bounded in time and size.
+ */
+class TraceSessionBridge {
+  private readonly entries = new Map<string, TraceBridgeEntry>();
+
+  constructor(
+    private readonly limit = TRACE_BRIDGE_LIMIT,
+    private readonly ttlMs = TRACE_BRIDGE_TTL_MS,
+    private readonly now: () => number = Date.now,
+  ) {}
+
+  private pruneExpired(now = this.now()): void {
+    for (const [key, entry] of this.entries) {
+      if (entry.expiresAt <= now) this.entries.delete(key);
+    }
+  }
+
+  private enforceLimit(): void {
+    while (this.entries.size > this.limit) {
+      const oldest = this.entries.keys().next().value as string | undefined;
+      if (!oldest) return;
+      this.entries.delete(oldest);
+    }
+  }
+
+  record(key: string, sessionId: string): void {
+    const now = this.now();
+    this.pruneExpired(now);
+    const existing = this.entries.get(key);
+    const ambiguous = existing?.ambiguous === true ||
+      (existing?.sessionId !== undefined && existing.sessionId !== sessionId);
+    this.entries.delete(key);
+    this.entries.set(key, {
+      sessionId: ambiguous ? null : sessionId,
+      ambiguous,
+      expiresAt: now + this.ttlMs,
+    });
+    this.enforceLimit();
+  }
+
+  markAmbiguous(key: string): void {
+    const now = this.now();
+    this.pruneExpired(now);
+    this.entries.delete(key);
+    this.entries.set(key, { sessionId: null, ambiguous: true, expiresAt: now + this.ttlMs });
+    this.enforceLimit();
+  }
+
+  resolve(key: string): string | undefined {
+    const now = this.now();
+    const entry = this.entries.get(key);
+    if (!entry || entry.expiresAt <= now) {
+      if (entry) this.entries.delete(key);
+      this.pruneExpired(now);
+      return undefined;
+    }
+    if (entry.ambiguous || !entry.sessionId) return undefined;
+    // Refresh the sliding TTL and LRU position after an exact successful match.
+    entry.expiresAt = now + this.ttlMs;
+    this.entries.delete(key);
+    this.entries.set(key, entry);
+    return entry.sessionId;
+  }
+
+  clear(): void {
+    this.entries.clear();
+  }
+
+  get size(): number {
+    this.pruneExpired();
+    return this.entries.size;
+  }
+
+  get limitValue(): number {
+    return this.limit;
+  }
+
+  get ttlMsValue(): number {
+    return this.ttlMs;
+  }
+}
+
+const traceSessionBridge = new TraceSessionBridge();
+
+function isNonZeroHex(value: string): boolean {
+  return /[1-9a-f]/iu.test(value);
+}
+
+function traceKeyFromContext(value: unknown): string | undefined {
+  const trace = asRecord(value);
+  const traceId = boundedIdentity(trace?.traceId)?.toLowerCase();
+  const spanId = boundedIdentity(trace?.spanId)?.toLowerCase();
+  if (!traceId || !/^[0-9a-f]{32}$/u.test(traceId) || !isNonZeroHex(traceId)) return undefined;
+  if (!spanId || !/^[0-9a-f]{16}$/u.test(spanId) || !isNonZeroHex(spanId)) return undefined;
+  return `${traceId}:${spanId}`;
+}
+
+function traceKeyFromTraceparent(value: unknown): string | undefined {
+  const traceparent = boundedIdentity(value);
+  if (!traceparent) return undefined;
+  // Restrict correlation to the exact canonical W3C form OpenClaw currently
+  // emits. Reject extensions/future forms instead of weakening identity.
+  const match = /^00-([0-9a-fA-F]{32})-([0-9a-fA-F]{16})-([0-9a-fA-F]{2})$/u.exec(traceparent);
+  if (!match) return undefined;
+  return traceKeyFromContext({ traceId: match[1], spanId: match[2] });
+}
+
+function traceKeyFromHeaders(value: unknown): string | undefined {
+  const headers = asRecord(value);
+  if (!headers) return undefined;
+  let candidate: string | undefined;
+  for (const [name, raw] of Object.entries(headers)) {
+    if (name.toLowerCase() !== "traceparent") continue;
+    if (typeof raw !== "string") return undefined;
+    const normalized = raw.trim().toLowerCase();
+    if (candidate !== undefined && candidate !== normalized) return undefined;
+    candidate = normalized;
+  }
+  return traceKeyFromTraceparent(candidate);
+}
+
+function recordModelCallStarted(event: unknown, ctx: unknown): void {
+  const context = asRecord(ctx);
+  const traceKey = traceKeyFromContext(context?.trace);
+  const sessionId = boundedIdentity(context?.sessionId);
+  if (!traceKey || !sessionId) return;
+
+  // The lifecycle context owns identity. An event session is only a
+  // consistency check and must never stand in for a missing context session.
+  const eventSessionId = boundedIdentity(asRecord(event)?.sessionId);
+  if (eventSessionId && eventSessionId !== sessionId) {
+    traceSessionBridge.markAmbiguous(traceKey);
+    return;
+  }
+  traceSessionBridge.record(traceKey, sessionId);
+}
+
+function registerTraceSessionBridgeHook(api: OpenClawPluginApi): boolean {
+  const on = (api as unknown as { on?: unknown }).on;
+  if (typeof on !== "function") return false;
+  try {
+    (on as (name: string, handler: (event: unknown, ctx: unknown) => void) => void).call(
+      api,
+      "model_call_started",
+      recordModelCallStarted,
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -197,18 +360,24 @@ function wrapCloudsigmaStreamFn(ctx: ProviderWrapStreamFnContext) {
   return function cloudsigmaAffinityStreamFn(...args: Parameters<typeof inner>) {
     const [model, context, options] = args;
     const optionRecord = options as (Record<string, unknown> | undefined);
-    const sessionId = boundedIdentity(optionRecord?.sessionId);
-    if (!sessionId) return inner(model, context, options);
-
-    const correlation = buildCorrelationMetadata({
-      sessionId,
-      agentId: agentIdFromSession(sessionId),
-      provider: ctx.provider,
-      modelId: modelIdFromContext(ctx),
-    });
+    const directOptionsSessionId = boundedIdentity(optionRecord?.sessionId);
+    const wrapperSessionId = boundedIdentity((ctx as { sessionId?: unknown }).sessionId);
+    const traceKey = traceKeyFromHeaders(optionRecord?.headers);
+    let resolvedSessionId: string | undefined;
+    const resolveSessionId = (): string | undefined => {
+      if (resolvedSessionId) return resolvedSessionId;
+      const sessionId = directOptionsSessionId ?? wrapperSessionId ??
+        (traceKey ? traceSessionBridge.resolve(traceKey) : undefined);
+      if (sessionId) resolvedSessionId = sessionId;
+      return sessionId;
+    };
     const previousOnPayload = options?.onPayload;
     const previousOnResponse = options?.onResponse;
-    const algorithm = getAutorouterAlgorithm(sessionId);
+    // A trace entry that already exists can safely carry the scoped override
+    // on the first attempt. A queued lifecycle hook may arrive later; payload
+    // identity resolution below yields once for that race but never guesses.
+    const initialSessionId = resolveSessionId();
+    const algorithm = initialSessionId ? getAutorouterAlgorithm(initialSessionId) : undefined;
 
     return inner(model, context, {
       ...options,
@@ -221,13 +390,26 @@ function wrapCloudsigmaStreamFn(ctx: ProviderWrapStreamFnContext) {
           }
         : {}),
       onPayload: async (payload, payloadModel) => {
+        // OpenClaw dispatches model_call_started through a queued microtask.
+        // Yield once only when direct native identities are unavailable; the
+        // later resolution still requires an exact validated trace/span match.
+        if (!directOptionsSessionId && !wrapperSessionId && traceKey) await Promise.resolve();
+        const sessionId = resolveSessionId();
+        if (!sessionId) return previousOnPayload ? previousOnPayload(payload, payloadModel) : payload;
+        const correlation = buildCorrelationMetadata({
+          sessionId,
+          agentId: agentIdFromSession(sessionId),
+          provider: ctx.provider,
+          modelId: modelIdFromContext(ctx),
+        });
         const patched = asRecord(payload)
           ? patchPayloadMetadata(asRecord(payload)!, sessionId, correlation)
           : payload;
         return previousOnPayload ? previousOnPayload(patched, payloadModel) : patched;
       },
       onResponse: async (response, responseModel) => {
-        captureAutorouterResponse(sessionId, response?.headers);
+        const sessionId = resolveSessionId();
+        if (sessionId) captureAutorouterResponse(sessionId, response?.headers);
         if (previousOnResponse) await previousOnResponse(response, responseModel);
       },
     });
@@ -373,6 +555,7 @@ const plugin: OpenClawPluginDefinition & { __test__?: Record<string, unknown> } 
   ...providerPlugin,
   register(api) {
     providerPlugin.register?.(api);
+    registerTraceSessionBridgeHook(api);
     warnOnLegacyAffinityCoexistence(api);
     registerAutorouterGatewayMethods(api);
     api.registerRealtimeVoiceProvider(buildCloudsigmaRealtimeVoiceProvider());
@@ -387,6 +570,12 @@ const plugin: OpenClawPluginDefinition & { __test__?: Record<string, unknown> } 
     setAutorouterAlgorithm,
     autorouterAlgorithmBySessionId,
     lastAutorouterRouteBySessionId,
+    TraceSessionBridge,
+    traceSessionBridge,
+    traceKeyFromContext,
+    traceKeyFromTraceparent,
+    traceKeyFromHeaders,
+    recordModelCallStarted,
   },
 };
 
