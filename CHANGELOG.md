@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.3
+
+- Consolidate native OpenClaw session affinity into the first-class CloudSigma provider for full agent/tool and simple-completion streams.
+- Forward bounded session, agent, turn, attempt, and plugin-version transport headers to TaaS.
+- Add no-overwrite session/sticky/correlation payload metadata across GPT, Claude, AutoRouter, and generic CloudSigma models.
+- Preserve generic/background identity through a bounded, exact W3C trace/span bridge that fails closed on malformed or conflicting correlation.
+- Add bounded per-session AutoRouter controls and response capture, plus a coexistence warning for the legacy affinity optimizer.
+- Activate at Gateway startup so lifecycle subscriptions and operator RPC methods are reliably registered.
+
 ## 0.2.2
 
 - Request `gpt-4o-mini-transcribe` input transcription in browser WebRTC sessions so completed speech produces the final transcript required by OpenClaw agent consults.

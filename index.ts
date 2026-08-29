@@ -18,7 +18,7 @@ import {
 import { buildCloudsigmaRealtimeVoiceProvider } from "./realtime-voice.js";
 
 const PROVIDER_ID = "cloudsigma";
-const PLUGIN_VERSION = "0.2.2";
+const PLUGIN_VERSION = "0.2.3";
 const CORRELATION_SCHEMA_VERSION = "2026-08-29";
 const CORRELATION_SOURCE = "@cloudsigma/openclaw-taas-provider";
 const IDENTITY_LIMIT = 200;
