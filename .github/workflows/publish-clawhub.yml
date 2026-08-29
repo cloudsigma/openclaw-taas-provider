@@ -39,6 +39,5 @@ jobs:
             --version "${{ inputs.version }}" \
             --tags "${{ inputs.tags }}" \
             --source-repo cloudsigma/openclaw-taas-provider \
-            --source-ref "${{ github.ref_name }}" \
             --source-commit "${{ github.sha }}" \
             --json
