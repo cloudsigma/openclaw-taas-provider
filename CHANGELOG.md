@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5
+
+- Correct the runtime `X-OpenClaw-Plugin-Version` header and correlation metadata to report `0.2.5` instead of the stale `0.2.3` value found during the Snowcrash/Rufus fleet canary.
+- Add regression expectations for both the transport header and payload correlation version.
+
 ## 0.2.4
 
 - Rename the public plugin and marketplace listing to **CloudSigma AI Mission Control**.

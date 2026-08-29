@@ -1,7 +1,7 @@
 {
   "id": "cloudsigma",
   "name": "CloudSigma AI Mission Control",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "One plugin. Every leading AI model. Connect OpenClaw to CloudSigma Mission Control for GPT, Claude, Gemini, Kimi, Qwen and more—with streaming, tool calling, live model discovery, session affinity, optimised autorouter and prompt-cache-aware routing built in.",
   "activation": {
     "onStartup": true
@@ -11,15 +11,32 @@
     "properties": {
       "apiKey": {
         "anyOf": [
-          { "type": "string" },
+          {
+            "type": "string"
+          },
           {
             "type": "object",
             "properties": {
-              "source": { "enum": ["env", "file", "exec"], "type": "string" },
-              "provider": { "type": "string" },
-              "id": { "type": "string" }
+              "source": {
+                "enum": [
+                  "env",
+                  "file",
+                  "exec"
+                ],
+                "type": "string"
+              },
+              "provider": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              }
             },
-            "required": ["source", "provider", "id"],
+            "required": [
+              "source",
+              "provider",
+              "id"
+            ],
             "additionalProperties": false
           }
         ]

@@ -129,7 +129,7 @@ describe("cloudsigma provider plugin", () => {
       headers: {
         "X-Session-Id": "agent:new-agent-4:main",
         "X-OpenClaw-Session-Id": "agent:new-agent-4:main",
-        "X-OpenClaw-Plugin-Version": "0.2.3",
+        "X-OpenClaw-Plugin-Version": "0.2.5",
         "X-OpenClaw-Agent-Id": "new-agent-4",
         "X-OpenClaw-Turn-Id": "turn-1",
         "X-OpenClaw-Attempt": "1",
@@ -180,7 +180,7 @@ describe("cloudsigma provider plugin", () => {
         openclaw_correlation: {
           schema_version: "2026-08-29",
           source: "@cloudsigma/openclaw-taas-provider",
-          plugin_version: "0.2.3",
+          plugin_version: "0.2.5",
           session_id: sessionId,
           sticky_key: sessionId,
           session_identity_scope: "native_openclaw_session",
