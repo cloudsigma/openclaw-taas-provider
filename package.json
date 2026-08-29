@@ -1,6 +1,6 @@
 {
   "name": "@cloudsigma/openclaw-taas-provider",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "One plugin. Every leading AI model. Connect OpenClaw to CloudSigma Mission Control for GPT, Claude, Gemini, Kimi, Qwen and more—with streaming, tool calling, live model discovery, session affinity, optimised autorouter and prompt-cache-aware routing built in.",
   "type": "module",
   "main": "dist/index.js",
