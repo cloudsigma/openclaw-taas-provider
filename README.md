@@ -85,6 +85,16 @@ OpenClaw supplies its native per-conversation `sessionId`; it never creates an
 identity from a workspace path, hostname, process state, time, prompt content,
 or agent name.
 
+Some generic/background and direct-simple OpenClaw paths carry the same native
+identity through the public `model_call_started` lifecycle event rather than
+`options.sessionId`. Where that hook is available, the provider correlates only
+an exact valid W3C `traceId` + `spanId` from that event with the invocation's
+`traceparent` header. Invocation `options.sessionId` wins, then a runtime
+wrapper `ctx.sessionId`, then this exact trace bridge. The bridge is bounded to
+1,024 entries, has a 30-minute sliding TTL, supports retry-safe reuse, and
+fails closed for malformed or conflicting traces. It never uses timing,
+workspace, process, agent, or environment state to correlate calls.
+
 For each eligible HTTP/WebSocket transport turn, the plugin sends:
 
 - `X-Session-Id` and `X-OpenClaw-Session-Id`
@@ -109,6 +119,11 @@ rather than silently conflating independent conversations.
 AutoRouter response details and an optional AutoRouter algorithm preference are
 kept in a bounded in-memory map keyed by that same native session id. They are
 not shared across sessions and are not a replacement identity mechanism.
+
+The plugin requests startup activation because its optional AutoRouter gateway
+RPC methods and trace lifecycle subscription must be registered in the live
+Gateway dispatch table. Provider-only lazy activation is not sufficient for
+those Gateway surfaces.
 
 ### Privacy and security
 
