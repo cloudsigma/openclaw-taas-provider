@@ -12,6 +12,34 @@ import {
 import { buildCloudsigmaRealtimeVoiceProvider } from "./realtime-voice.js";
 
 const PROVIDER_ID = "cloudsigma";
+const SESSION_HEADER = "X-Session-Id";
+const OPENCLAW_SESSION_HEADER = "X-OpenClaw-Session-Id";
+const OPENCLAW_AGENT_HEADER = "X-OpenClaw-Agent-Id";
+
+function boundedIdentity(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const clean = value.trim();
+  if (!clean || clean.length > 200 || /[\u0000-\u001f\u007f]/u.test(clean)) return undefined;
+  return clean;
+}
+
+function agentIdFromSession(sessionId: string): string {
+  const match = /^agent:([^:]+):/u.exec(sessionId);
+  return match?.[1] || "main";
+}
+
+function resolveCloudsigmaTransportTurnState(ctx: { sessionId?: unknown }) {
+  const sessionId = boundedIdentity(ctx.sessionId);
+  if (!sessionId) return undefined;
+  const agentId = agentIdFromSession(sessionId);
+  return {
+    headers: {
+      [SESSION_HEADER]: sessionId,
+      [OPENCLAW_SESSION_HEADER]: sessionId,
+      [OPENCLAW_AGENT_HEADER]: agentId,
+    },
+  };
+}
 
 const providerPlugin = defineSingleProviderPluginEntry({
   id: PROVIDER_ID,
@@ -58,6 +86,10 @@ const providerPlugin = defineSingleProviderPluginEntry({
       dropReasoningFromHistory: false,
     }),
     ...buildProviderToolCompatFamilyHooks("openai"),
+    // The first-class CloudSigma provider owns the active provider runtime
+    // hook surface.  Carry native OpenClaw identity here instead of relying on
+    // a second alias plugin that cannot win provider-hook selection.
+    resolveTransportTurnState: resolveCloudsigmaTransportTurnState,
   },
 });
 

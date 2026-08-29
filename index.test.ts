@@ -47,6 +47,28 @@ describe("cloudsigma provider plugin", () => {
     expect(provider.envVars).toEqual(["CLOUDSIGMA_API_KEY"]);
     expect(provider.auth?.map((method) => method.id)).toEqual(["api-key"]);
 
+    expect(provider.resolveTransportTurnState?.({
+      provider: "cloudsigma",
+      modelId: "claude-opus-4.8",
+      sessionId: "agent:new-agent-4:main",
+      turnId: "turn-1",
+      attempt: 1,
+      transport: "stream",
+    })).toEqual({
+      headers: {
+        "X-Session-Id": "agent:new-agent-4:main",
+        "X-OpenClaw-Session-Id": "agent:new-agent-4:main",
+        "X-OpenClaw-Agent-Id": "new-agent-4",
+      },
+    });
+    expect(provider.resolveTransportTurnState?.({
+      provider: "cloudsigma",
+      modelId: "claude-opus-4.8",
+      turnId: "turn-2",
+      attempt: 1,
+      transport: "stream",
+    })).toBeUndefined();
+
     const result = await provider.staticCatalog?.run({
       config: {},
       env: {},
