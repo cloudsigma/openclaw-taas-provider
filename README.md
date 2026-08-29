@@ -4,7 +4,7 @@
 
 OpenClaw provider plugin for **CloudSigma TaaS** — an OpenAI-compatible, multi-model gateway that exposes CloudSigma-hosted model routes through one OpenClaw provider.
 
-This plugin lets OpenClaw use CloudSigma TaaS as a first-class model provider with API-key onboarding, a conservative static model catalog, live model discovery when credentials are available, OpenAI-compatible request handling, and browser WebRTC Talk through `gpt-realtime-2.1`.
+This plugin lets OpenClaw use CloudSigma TaaS as a first-class model provider with API-key onboarding, a conservative static model catalog, live model discovery when credentials are available, OpenAI-compatible request handling, native OpenClaw session affinity, and browser WebRTC Talk through `gpt-realtime-2.1`.
 
 ## What this plugin provides
 
@@ -14,6 +14,7 @@ This plugin lets OpenClaw use CloudSigma TaaS as a first-class model provider wi
 - Default endpoint: `https://taas.cloudsigma.com/v1`
 - Auth via `CLOUDSIGMA_API_KEY`
 - OpenAI-compatible chat/completions transport
+- Native session affinity and bounded request correlation for agent, tool, and simple-completion streams
 - Streaming usage support
 - Tool-call compatibility through OpenAI-style tool payloads
 - Replay/history compatibility for OpenAI-compatible provider families
@@ -26,6 +27,13 @@ This plugin lets OpenClaw use CloudSigma TaaS as a first-class model provider wi
 ```bash
 openclaw plugins install clawhub:@cloudsigma/openclaw-taas-provider
 ```
+
+> [!IMPORTANT]
+> This is the **one-plugin CloudSigma setup**. New installations must not also
+> install `openclaw-taas-affinity`; this provider owns the `cloudsigma` runtime
+> hooks and includes its supported affinity behavior. Legacy affinity-only
+> installations can remain temporarily unchanged until migrated as a controlled
+> configuration update.
 
 OpenClaw install source:
 
@@ -68,6 +76,48 @@ cloudsigma/gemini-3.1-flash-lite
 ```
 
 The provider alias `cloudsigma-taas` resolves to the same provider auth as `cloudsigma`.
+
+## Session affinity and request correlation
+
+CloudSigma TaaS uses a stable logical session key to preserve eligible upstream
+continuations and prompt-cache locality. The provider forwards this only when
+OpenClaw supplies its native per-conversation `sessionId`; it never creates an
+identity from a workspace path, hostname, process state, time, prompt content,
+or agent name.
+
+For each eligible HTTP/WebSocket transport turn, the plugin sends:
+
+- `X-Session-Id` and `X-OpenClaw-Session-Id`
+- `X-OpenClaw-Plugin-Version`
+- `X-OpenClaw-Agent-Id` when it is encoded in the native session key
+- `X-OpenClaw-Turn-Id` and `X-OpenClaw-Attempt`
+
+For both normal agent/tool streams and direct/simple completions, it adds the
+following OpenAI-compatible payload metadata when the caller has not already
+provided that field:
+
+- `metadata.session_id`
+- `metadata.sticky_key`
+- `metadata.openclaw_correlation` (schema/source/plugin version/session,
+  agent when available, provider, and model)
+
+Existing `metadata` fields are preserved, including caller-supplied session,
+sticky, correlation, and `requester_runtime` values. A missing native session
+means no affinity metadata is added. This makes unattributable traffic explicit
+rather than silently conflating independent conversations.
+
+AutoRouter response details and an optional AutoRouter algorithm preference are
+kept in a bounded in-memory map keyed by that same native session id. They are
+not shared across sessions and are not a replacement identity mechanism.
+
+### Privacy and security
+
+Session identifiers are sent to CloudSigma TaaS because they are necessary for
+session affinity. The provider validates them as bounded, header-safe strings
+before forwarding. The correlation envelope contains no prompt text, workspace
+paths, hostnames, environment values, git metadata, secrets, or requester-bridge
+data. The plugin does not implement the retired requester bridge, does not poll
+external services, and does not persist affinity state locally.
 
 ### Realtime Talk (WebRTC)
 
@@ -200,6 +250,7 @@ Before publishing, releases are expected to pass:
 
 ```bash
 npm ci
+npm run typecheck
 npm run build
 npm test
 npx -y clawhub@0.21.0 package validate . --json
@@ -210,6 +261,9 @@ The test suite covers:
 
 - Plugin registration
 - Provider id, alias, auth metadata, and catalog registration
+- Native transport headers (session, plugin version, agent, turn, and attempt)
+- Session/sticky/correlation metadata for GPT, Claude, AutoRouter, and simple-completion paths
+- Preservation of caller-provided metadata and no identity fallback without a native session
 - Onboarding/default-model config writes
 - Static catalog shape
 - Live discovery success path
@@ -237,6 +291,15 @@ That is intentional unless the route is verified or the CloudSigma TaaS metadata
 ### Requests fail with auth errors
 
 Confirm the same environment that runs OpenClaw has `CLOUDSIGMA_API_KEY` set. Shell-local exports do not help if OpenClaw is running under a service manager with a different environment.
+
+### Continuations do not stay on one TaaS route
+
+Confirm that this provider plugin is enabled and that the OpenClaw request has a
+native session id. The provider deliberately does not derive identity from a
+workspace or process. On a new setup, remove any legacy
+`openclaw-taas-affinity` plugin configuration so the single provider owns the
+CloudSigma hook surface, then reload/restart OpenClaw through your normal
+controlled operations process.
 
 ## Package identity
 
