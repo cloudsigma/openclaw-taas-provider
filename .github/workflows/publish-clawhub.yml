@@ -34,7 +34,6 @@ jobs:
         run: |
           npx -y clawhub@0.21.0 package publish . \
             --family code-plugin \
-            --owner cloudsigma \
             --name @cloudsigma/openclaw-taas-provider \
             --display-name "CloudSigma TaaS Provider" \
             --version "${{ inputs.version }}" \
