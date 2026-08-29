@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4
+
+- Rename the public plugin and marketplace listing to **CloudSigma AI Mission Control**.
+- Describe the one-plugin experience across GPT, Claude, Gemini, Kimi, Qwen, and other models, including streaming, tool calling, live discovery, session affinity, optimised AutoRouter, and prompt-cache-aware routing.
+- Keep the package name, provider id, configuration keys, and installation path unchanged for compatibility.
+
 ## 0.2.3
 
 - Consolidate native OpenClaw session affinity into the first-class CloudSigma provider for full agent/tool and simple-completion streams.

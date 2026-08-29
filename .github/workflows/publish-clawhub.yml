@@ -6,7 +6,7 @@ on:
       version:
         description: Package version to publish
         required: true
-        default: 0.1.0
+        default: 0.2.4
       tags:
         description: Comma-separated ClawHub tags
         required: true
@@ -35,7 +35,7 @@ jobs:
           npx -y clawhub@0.21.0 package publish . \
             --family code-plugin \
             --name @cloudsigma/openclaw-taas-provider \
-            --display-name "CloudSigma TaaS Provider" \
+            --display-name "CloudSigma AI Mission Control" \
             --version "${{ inputs.version }}" \
             --tags "${{ inputs.tags }}" \
             --source-repo cloudsigma/openclaw-taas-provider \
