@@ -397,3 +397,29 @@ describe("cloudsigma provider plugin", () => {
     testHooks.setAutorouterAlgorithm(sessionId, null);
   });
 });
+
+
+describe('Sol/Astra native effort profile', () => {
+  it('exposes xhigh and logical Ultra without altering unrelated models', async () => {
+    const { provider } = await registerSingleProviderPluginForTest();
+    for (const modelId of ['gpt-6-sol','gpt-6.1-sol','gpt-6-astra']) {
+      expect(provider.resolveThinkingProfile({modelId, reasoning:true}).levels.map((x:any)=>x.id))
+        .toEqual(['off','low','medium','high','xhigh','max','ultra']);
+    }
+    expect(provider.resolveThinkingProfile({modelId:'claude-opus-5.5'})).toBeUndefined();
+    expect(provider.resolveThinkingProfile({modelId:'gpt-6-sol',reasoning:false}).levels).toEqual([{id:'off'}]);
+  });
+  it.each(['wrapStreamFn','wrapSimpleCompletionStreamFn'])('preserves Ultra intent on %s without changing xhigh', async (hook) => {
+    const {provider} = await registerSingleProviderPluginForTest();
+    for (const effort of ['ultra','xhigh']) {
+      let captured:any;
+      const wrapped=provider[hook]({provider:'cloudsigma',modelId:'gpt-6-sol',streamFn:(m:any,c:any,o:any)=>{captured=o;}});
+      wrapped({id:'gpt-6-sol'}, {}, {reasoningEffort:effort});
+      expect(captured.reasoningEffort).toBe(effort);
+      const payload = await captured.onPayload({reasoning_effort: 'max'}, {id:'gpt-6-sol'});
+      expect(payload.reasoning_effort).toBe(effort==='ultra'?'ultra':'max');
+      const nested = await captured.onPayload({reasoning: {effort: 'max'}}, {id:'gpt-6-sol'});
+      expect(nested.reasoning.effort).toBe(effort==='ultra'?'ultra':'max');
+    }
+  });
+});
