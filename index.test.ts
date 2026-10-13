@@ -409,13 +409,17 @@ describe('Sol/Astra native effort profile', () => {
     expect(provider.resolveThinkingProfile({modelId:'claude-opus-5.5'})).toBeUndefined();
     expect(provider.resolveThinkingProfile({modelId:'gpt-6-sol',reasoning:false}).levels).toEqual([{id:'off'}]);
   });
-  it.each(['wrapStreamFn','wrapSimpleCompletionStreamFn'])('maps Ultra to max on %s without changing xhigh', async (hook) => {
+  it.each(['wrapStreamFn','wrapSimpleCompletionStreamFn'])('preserves Ultra intent on %s without changing xhigh', async (hook) => {
     const {provider} = await registerSingleProviderPluginForTest();
     for (const effort of ['ultra','xhigh']) {
       let captured:any;
       const wrapped=provider[hook]({provider:'cloudsigma',modelId:'gpt-6-sol',streamFn:(m:any,c:any,o:any)=>{captured=o;}});
       wrapped({id:'gpt-6-sol'}, {}, {reasoningEffort:effort});
-      expect(captured.reasoningEffort).toBe(effort==='ultra'?'max':'xhigh');
+      expect(captured.reasoningEffort).toBe(effort);
+      const payload = await captured.onPayload({reasoning_effort: 'max'}, {id:'gpt-6-sol'});
+      expect(payload.reasoning_effort).toBe(effort==='ultra'?'ultra':'max');
+      const nested = await captured.onPayload({reasoning: {effort: 'max'}}, {id:'gpt-6-sol'});
+      expect(nested.reasoning.effort).toBe(effort==='ultra'?'ultra':'max');
     }
   });
 });

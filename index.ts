@@ -381,9 +381,6 @@ function wrapCloudsigmaStreamFn(ctx: ProviderWrapStreamFnContext) {
 
     return inner(model, context, {
       ...options,
-      ...(['gpt-6-sol', 'gpt-6.1-sol', 'gpt-6-astra'].includes(model.id)
-          && (optionRecord?.reasoningEffort === 'ultra' || optionRecord?.reasoning === 'ultra')
-        ? { reasoning: 'max', reasoningEffort: 'max' } : {}),
       ...(algorithm
         ? {
             headers: {
@@ -393,6 +390,17 @@ function wrapCloudsigmaStreamFn(ctx: ProviderWrapStreamFnContext) {
           }
         : {}),
       onPayload: async (payload, payloadModel) => {
+        // TaaS resolves requested Ultra after selecting the execution lane.
+        // Restore intent if the generic OpenAI transport lowered it first.
+        if (['gpt-6-sol', 'gpt-6.1-sol', 'gpt-6-astra'].includes(model.id)
+            && (optionRecord?.reasoningEffort === 'ultra' || optionRecord?.reasoning === 'ultra')) {
+          const record = asRecord(payload);
+          if (record) {
+            const reasoning = asRecord(record.reasoning);
+            if (reasoning) record.reasoning = { ...reasoning, effort: 'ultra' };
+            if ('reasoning_effort' in record || !reasoning) record.reasoning_effort = 'ultra';
+          }
+        }
         // OpenClaw dispatches model_call_started through a queued microtask.
         // Yield once only when direct native identities are unavailable; the
         // later resolution still requires an exact validated trace/span match.
