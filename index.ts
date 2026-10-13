@@ -381,6 +381,9 @@ function wrapCloudsigmaStreamFn(ctx: ProviderWrapStreamFnContext) {
 
     return inner(model, context, {
       ...options,
+      ...(['gpt-6-sol', 'gpt-6.1-sol', 'gpt-6-astra'].includes(model.id)
+          && (optionRecord?.reasoningEffort === 'ultra' || optionRecord?.reasoning === 'ultra')
+        ? { reasoning: 'max', reasoningEffort: 'max' } : {}),
       ...(algorithm
         ? {
             headers: {
@@ -503,6 +506,15 @@ const providerPlugin = defineSingleProviderPluginEntry({
   description:
     "One plugin. Every leading AI model. Connect OpenClaw to CloudSigma Mission Control with streaming, tool calling, live model discovery, session affinity, optimised autorouter, and prompt-cache-aware routing.",
   provider: {
+    resolveThinkingProfile(ctx) {
+      // Sol/Astra native efforts are low..max; Ultra is OpenClaw's logical
+      // maximum-effort orchestration mode, not an additional supplier effort.
+      const id = ctx.modelId.trim().toLowerCase();
+      if (!['gpt-6-sol', 'gpt-6.1-sol', 'gpt-6-astra'].includes(id)) return undefined;
+      if (ctx.reasoning === false) return { levels: [{ id: 'off' as const }] };
+      return { levels: ['off', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'].map(
+        id => ({ id: id as 'off' | 'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'ultra' })) };
+    },
     label: "CloudSigma AI Mission Control",
     docsPath: "/providers/cloudsigma",
     aliases: ["cloudsigma-taas"],
